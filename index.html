@@ -1,0 +1,1090 @@
+<!-- ... existing code ... -->
+        <!-- PANEL PENGAWAS / GURU (DILINDUNGI PIN)   -->
+        <!-- ========================================== -->
+        <!-- Modal Authentikasi PIN Guru -->
+        <div id="guru-auth-modal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl max-w-xs w-full p-6 shadow-2xl space-y-4">
+                <div class="text-center">
+                    <div class="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center mx-auto mb-2 text-xl">
+                        <i class="fa-solid fa-lock"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-slate-800">Akses Panel Pengawas</h3>
+                    <p class="text-xs text-slate-500">Masukkan PIN Guru untuk melanjutkan.</p>
+                </div>
+
+                <div>
+                    <input type="password" id="guru-pin-input" placeholder="Masukkan PIN (Default: 1234)" class="w-full px-3 py-2.5 rounded-lg border border-slate-300 text-center font-mono text-lg tracking-widest focus:ring-2 focus:ring-emerald-500 outline-none">
+                </div>
+
+                <div id="guru-pin-error" class="hidden text-xs text-rose-600 text-center font-semibold">PIN Salah! Silakan coba lagi.</div>
+
+                <div class="flex gap-2">
+                    <button onclick="closeGuruAuthModal()" class="w-1/2 py-2 border border-slate-300 text-slate-600 text-xs rounded-lg">Batal</button>
+                    <button onclick="verifyGuruPin()" class="w-1/2 py-2 bg-emerald-600 text-white font-bold text-xs rounded-lg">Masuk</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Panel Guru -->
+        <section id="guru-panel-screen" class="hidden flex-1 bg-slate-100 p-4 sm:p-6">
+            <div class="max-w-6xl mx-auto space-y-6">
+                <!-- Header Panel -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                        <span class="px-2.5 py-1 bg-amber-100 text-amber-800 font-bold rounded-md text-xs">PANEL KONTROL GURU / PENGAWAS</span>
+                        <h1 class="text-xl font-bold text-slate-800 mt-1">Rekapitulasi & Kunci Jawaban SAS</h1>
+                        <p class="text-xs text-slate-500">Guru Pengampu: Salmawati Abdullah, S.Pd | MTs Terpadu Al Ishlah</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="exportToCSV()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow flex items-center gap-1.5">
+                            <i class="fa-solid fa-file-excel"></i> Export Excel/CSV
+                        </button>
+                        <button onclick="resetStudentSession()" class="px-3 py-2 bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold text-xs rounded-xl flex items-center gap-1">
+                            <i class="fa-solid fa-rotate-left"></i> Reset Sesi Siswa
+                        </button>
+                        <button onclick="exitGuruPanel()" class="px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs rounded-xl">
+                            Keluar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Webhook Config Card -->
+                <div class="bg-white p-4 rounded-2xl shadow-sm border space-y-2 text-xs">
+                    <h3 class="font-bold text-slate-800 flex items-center gap-1.5"><i class="fa-solid fa-link text-emerald-600"></i> Pengaturan Webhook Google Sheets</h3>
+                    <div class="flex gap-2">
+                        <input type="text" id="webhook-input" placeholder="https://script.google.com/macros/s/.../exec" class="flex-1 px-3 py-2 rounded-lg border border-slate-300 font-mono text-xs">
+                        <button onclick="saveWebhookUrl()" class="px-4 py-2 bg-emerald-700 text-white font-bold rounded-lg hover:bg-emerald-800">Simpan Webhook</button>
+                    </div>
+                    <p class="text-[11px] text-slate-400">Petunjuk: Buat Webhook via Google Apps Script (doPost) untuk menyimpan otomatis rekap nilai ke Google Drive Guru.</p>
+                </div>
+
+                <!-- Rekap Sesi Siswa Lokal -->
+                <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+                    <div class="p-4 border-b bg-slate-50 flex items-center justify-between">
+                        <h3 class="font-bold text-slate-800 text-sm">Data Hasil Ujian di Perangkat Ini</h3>
+                        <span class="text-xs text-slate-500">Tersimpan di LocalStorage</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-100 text-slate-600 uppercase border-b">
+                                <tr>
+                                    <th class="p-3">Nama Siswa</th>
+                                    <th class="p-3">Kelas</th>
+                                    <th class="p-3">Waktu Selesai</th>
+                                    <th class="p-3">Pelanggaran</th>
+                                    <th class="p-3">Skor Akhir</th>
+                                    <th class="p-3">Predikat</th>
+                                </tr>
+                            </thead>
+                            <tbody id="guru-table-body" class="divide-y text-slate-700">
+                                <tr>
+                                    <td colspan="6" class="p-4 text-center text-slate-400">Belum ada data ujian yang tersimpan.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Kunci Jawaban & Pembahasan -->
+                <div class="bg-white rounded-2xl shadow-sm border p-4 space-y-4">
+                    <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2 border-b pb-2">
+                        <i class="fa-solid fa-key text-amber-500"></i> Kunci Jawaban & Pembahasan Soal SAS Akidah Akhlak
+                    </h3>
+                    <div id="guru-keys-container" class="space-y-3 max-h-[400px] overflow-y-auto"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- MODAL PERINGATAN ANTI-CHEAT -->
+        <div id="cheat-warning-modal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl max-w-sm w-full p-6 text-center space-y-4 shadow-2xl border-2 border-rose-500">
+                <div class="w-16 h-16 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto text-3xl animate-bounce">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <h3 class="text-lg font-bold text-slate-900">Peringatan Pelanggaran!</h3>
+                <p class="text-xs text-slate-600 leading-relaxed">Anda terdeteksi meninggalkan halaman ujian atau berpindah tab. Pelanggaran ini telah dicatat oleh sistem pengawas.</p>
+                <div class="bg-rose-50 p-2.5 rounded-xl border border-rose-200 text-xs text-rose-800 font-bold">
+                    Total Pelanggaran: <span id="modal-cheat-count">1</span> Kali
+                </div>
+                <button onclick="closeCheatModal()" class="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs shadow-lg">
+                    Saya Mengerti & Kembali Ujian
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- SCRIPT UTAMA APLIKASI CBT -->
+    <script>
+        // URL Webhook Google Apps Script Guru
+        let WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbzw4lnwWkWToZ4FyxG24lz-LX3Q23yWc5k_c3970KQhVg8py2D1UG3lB-qq_BHXUtkGlQ/exec";
+        const EXAM_TOKEN = "ISLAH26";
+        const GURU_PIN = "1234";
+
+        // BANK SOAL SAS AKIDAH AKHLAK KELAS VII (25 SOAL LENGKAP)
+        const rawQuestionBank = [
+            // Soal 1-15: Pilihan Ganda (PG)
+            {
+                id: 1, type: "PG", weight: 4,
+                stimulus: `<p class='arabic-text text-center'>قُلْ هُوَ اللَّهُ أَحَدٌ</p><p class='text-xs text-slate-600 text-center'><b>QS. Al-Ikhlas: 1</b><br>Katakanlah: "Huwa Allahu Ahad" (Dialah Allah, Yang Maha Esa).</p>`,
+                question: "Berdasarkan ayat di atas, konsep akidah Islam yang paling mendasar mengenai sifat Allah SWT adalah...",
+                options: ["Tauhid (Keenyataan keesaan Allah SWT)", "Syirik (Menyekutukan Allah)", "Tasybih (Menyerupakan Allah)", "Ta'thil (Meniadakan sifat Allah)"],
+                answer: 0,
+                explanation: "Ayat pertama Surah Al-Ikhlas menegaskan kemurnian akidah tauhid, yaitu mengesakan Allah SWT dalam zat, sifat, dan perbuatan-Nya."
+            },
+            {
+                id: 2, type: "PG", weight: 4,
+                stimulus: `<p class='text-xs text-slate-600'>Di Kota Gorontalo, para santri diajarkan untuk selalu mengawali aktivitas harian dengan mengingat kebesaran Allah SWT melalui asmaul husna.</p>`,
+                question: "Asmaul Husna Al-Alim memiliki arti bahwa Allah SWT Maha...",
+                options: ["Mengetahui segala sesuatu", "Mendengar segala suara", "Melihat segala perbuatan", "Kuasa atas segala sesuatu"],
+                answer: 0,
+                explanation: "Al-Alim secara bahasa berarti Maha Mengetahui, baik yang tampak maupun yang tersembunyi di seluruh alam semesta."
+            },
+            {
+                id: 3, type: "PG", weight: 4,
+                stimulus: `<p class='arabic-text text-center'>وَهُوَ السَّمِيعُ الْبَصِيرُ</p><p class='text-xs text-slate-600 text-center'><b>QS. Asy-Syura: 11</b></p>`,
+                question: "Asmaul Husna As-Sami' dan Al-Bashir mengajarkan kepada kita untuk senantiasa...",
+                options: ["Berhati-hati dalam berucap dan berbuat karena Allah senantiasa mendengar dan melihat", "Merasa bebas melakukan makelar di tempat sepi", "Beribadah hanya ketika diawasi guru di madrasah", "Menghafal nama tanpa mengamalkan maknanya"],
+                answer: 0,
+                explanation: "Keyakinan bahwa Allah Maha Mendengar (As-Sami') dan Maha Melihat (Al-Bashir) melahirkan sifat muraqabah (merasa diawasi Allah)."
+            },
+            {
+                id: 4, type: "PG", weight: 4,
+                stimulus: `<p class='text-xs text-slate-600'>Dalam tradisi keislaman masyarakat Gorontalo yang menjunjung tinggi adat bersendikan syara', kejujuran adalah mahkota perilaku santri.</p>`,
+                question: "Sifat wajib bagi Allah SWT yang mustahil dilawan dengan sifat 'Adam (Ketiadaan) adalah...",
+                options: ["Wujud (Ada)", "Qidam (Terdahulu)", "Baqa' (Kekal)", "Mukhalafatu lil hawaditsi"],
+                answer: 0,
+                explanation: "Sifat wajib Allah 'Wujud' (Ada) mustahil dilawan dengan sifat 'Adam' (Tidak ada / tiada)."
+            },
+            {
+                id: 5, type: "PG", weight: 4,
+                stimulus: `<p class='text-xs text-slate-600'>Alam semesta beserta isinya diciptakan dengan perhitungan yang sangat teliti, menunjukkan sifat Allah SWT...</p>`,
+                question: "Sifat Jaiz bagi Allah SWT adalah...",
+                options: ["Berbuat sesuatu atau meninggalkannya (Mumkinul wujud)", "Wajib menciptakan keburukan di bumi", "Harus memberi pahala tanpa amal", "Mustahil berkehendak bebas"],
+                answer: 0,
+                explanation: "Sifat jaiz bagi Allah adalah kebebasan mutlak untuk menciptakan atau tidak menciptakan sesuatu sesuai kehendak-Nya."
+            },
+            {
+                id: 6, type: "PG", weight: 4,
+                stimulus: `<p class='text-xs text-slate-600'>Seorang santri MTS Al Ishlah menemukan dompet tertinggal di halaman masjid madrasah lalu menyerahkannya kepada guru piket.</p>`,
+                question: "Perilaku terpuji tersebut mencerminkan penerapan akhlak mahmudah yaitu...",
+                options: ["Amanah dan Jujur", "Riya' dan Sum'ah", "Ananiah dan Tamak", "Ghadhab dan Hasad"],
+                answer: 0,
+                explanation: "Menjaga titipan atau barang temuan adalah bentuk pengamalan sifat amanah dan jujur."
+            },
+            {
+                id: 7, type: "PG", weight: 4,
+                stimulus: `<p class='text-xs text-slate-600'>Adab bergaul dengan guru di lingkungan madrasah mencakup sikap tawadhu' dan mendengarkan penjelasan dengan khidmat.</p>`,
+                question: "Manfaat utama memiliki akhlak tawadhu' (rendah hati) dalam kehidupan sehari-hari adalah...",
+                options: ["Dicintai Allah SWT, diangkat derajatnya, dan dihormati sesama", "Dipandang hebat dan disegani karena kesombongan", "Memperoleh keuntungan materi yang banyak", "Menjadi pusat perhatian di kelas"],
+                answer: 0,
+                explanation: "Rasulullah SAW bersabda bahwa orang yang tawadhu' karena Allah akan diangkat derajatnya oleh Allah SWT."
+            },
+            {
+                id: 8, type: "PG", weight: 4,
+                stimulus: `<p class='arabic-text text-center'>يَا أَيُّهَا الَّذِينَ آمَنُوا اتَّقُوا اللَّهَ وَكُونُوا مَعَ الصَّادِقِينَ</p><p class='text-xs text-slate-600 text-center'><b>QS. At-Taubah: 119</b></p>`,
+                question: "Perintah dalam ayat di atas menegaskan agar umat Islam senantiasa berada dalam golongan orang-orang yang...",
+                options: ["Jujur (Ash-Shiddiqin)", "Pendusta (Al-Kazibin)", "Sombong (Al-Mutakabbirin)", "Putus asa (Al-Qanithin)"],
+                answer: 0,
+                explanation: "Ayat tersebut menyeru orang beriman untuk bertakwa dan senantiasa bersama orang-orang yang jujur."
+            },
+            {
+                id: 9, type: "PG", weight: 4,
+                stimulus: `<p class='text-xs text-slate-600'>Dalam pergaulan santri asrama, sikap istiqomah sangat diperlukan dalam menjaga kedisiplinan shalat berjamaah.</p>`,
+                question: "Arti dari sifat istiqomah adalah...",
+                options: ["Konsisten dan teguh pendirian dalam menjalankan ketaatan kepada Allah SWT", "Berubah-ubah sesuai situasi dan kondisi pergaulan", "Melakukan kebaikan hanya saat diawasi orang lain", "Malas beribadah setelah merasa cukup"],
+                answer: 0,
+                explanation: "Istiqomah adalah konsistensi dalam jalan kebenaran dan ketaatan secara terus-menerus."
+            },
+            {
+                id: 10, type: "PG", weight: 4,
+                stimulus: `<p class='text-xs text-slate-600'>Menghindari sifat tercela seperti 'Ananiah (keakuan/egois) sangat penting untuk menjaga keharmonisan ukhuwah islamiyah di madrasah.</p>`,
+                question: "Dampak negatif utama dari sifat 'Ananiah dalam kehidupan sosial adalah...",
+                options: ["Memutus tali silaturahmi dan dibenci oleh sesama teman", "Mendapatkan simpati dan dukungan luas", "Meningkatkan kerjasama kelompok belajar", "Menumbuhkan jiwa kepemimpinan yang adil"],
+                answer: 0,
+                explanation: "Sifat 'ananiah (egois) membuat seseorang hanya memikirkan diri sendiri sehingga merusak keharmonisan sosial."
+            },
+            {
+                id: 11, type: "PG", weight: 4,
+                stimulus: `<p class='text-xs text-slate-600'>Ghadhab adalah sifat pemarah yang dapat menjerumuskan seseorang pada penyesalan mendalam jika tidak dikendalikan.</p>`,
+                question: "Langkah Islami yang diajarkan Rasulullah SAW saat seseorang dilanda amarah (ghadhab) adalah...",
+                options: ["Mengubah posisi (duduk jika berdiri, berbaring jika duduk) dan beristighfar", "Melampiaskan amarah dengan membanting benda sekitar", "Membalas perkataan kasar dengan makian lebih keras", "Diam namun memendam rasa benci berkepanjangan"],
+                answer: 0,
+                explanation: "Rasulullah mengajarkan untuk meredam amarah dengan mengubah posisi dan membaca ta'awudz/istighfar."
+            },
+            {
+                id: 12, type: "PG", weight: 4,
+                stimulus: `<p class='text-xs text-slate-600'>Hasad (dengki) adalah penyakit hati yang membakar amal kebaikan seperti api memakan kayu bakar.</p>`,
+                question: "Definisi yang tepat mengenai sifat tercela hasad adalah...",
+                options: ["Merasa tidak suka melihat nikmat orang lain dan berniat agar nikmat tersebut hilang", "Berkeinginan memiliki rezeki seperti orang lain tanpa mencelakai", "Bekerja keras untuk meraih prestasi yang lebih tinggi", "Merasa bersyukur atas karunia Allah pada diri sendiri"],
+                answer: 0,
+                explanation: "Hasad adalah sifat iri dengki yang disertai keinginan agar nikmat yang ada pada orang lain lenyap."
+            },
+            {
+                id: 13, type: "PG", weight: 4,
+                stimulus: `<p class='text-xs text-slate-600'>Kisah teladan Nabi Ibrahim AS dalam mencari Tuhan mengajarkan pentingnya keteguhan akidah tauhid di tengah masyarakat penyembah berhala.</p>`,
+                question: "Sifat wajib bagi rasul yang berarti 'cerdas' adalah...",
+                options: ["Fathonah", "Shiddiq", "Amanah", "Tabligh"],
+                answer: 0,
+                explanation: "Fathonah adalah sifat wajib bagi para rasul yang berarti cerdas dan bijaksana."
+            },
+            {
+                id: 14, type: "PG", weight: 4,
+                stimulus: `<p class='text-xs text-slate-600'>Sebagai lembaga pendidikan berciri khas Islam di Gorontalo, MTs Terpadu Al Ishlah menanamkan adab islami dalam menggunakan teknologi.</p>`,
+                question: "Adab Islami yang benar saat menggunakan media sosial bagi seorang santri adalah...",
+                options: ["Menyebarkan informasi yang benar (tabayyun) dan bernilai kebaikan", "Menulis komentar hujatan dan berita bohong (hoaks)", "Membuang waktu bermain game hingga melalaikan shalat", "Memamerkan harta benda untuk mendapatkan pujian"],
+                answer: 0,
+                explanation: "Santri wajib menerapkan prinsip tabayyun (saring sebelum sharing) dan menjaga etika bermedia sosial."
+            },
+            {
+                id: 15, type: "PG", weight: 4,
+                stimulus: `<p class='text-xs text-slate-600'>Riya' dalam beribadah termasuk dalam kategori syirik khafi (tersembunyi) yang sangat berbahaya bagi keimanan.</p>`,
+                question: "Maksud dari sifat riya' adalah...",
+                options: ["Melakukan ibadah atau kebaikan agar dilihat dan dipuji oleh orang lain", "Beramal ikhlas semata-mata mencari ridho Allah SWT", "Menceritakan amal kebaikan kepada orang tua untuk motivasi", "Merasa bangga atas nikmat kesehatan yang diberikan Allah"],
+                answer: 0,
+                explanation: "Riya' adalah memperlihatkan amal ibadah kepada orang lain agar mendapatkan pujian atau kedudukan."
+            },
+
+            // Soal 16-20: PG Kompleks (PGK)
+            {
+                id: 16, type: "PGK", weight: 4,
+                stimulus: `<p class='text-xs text-slate-600'>Pilihlah <b>dua</b> jawaban yang benar mengenai sifat-sifat wajib bagi Allah SWT dalam aqidah Islam.</p>`,
+                question: "Manakah di antara pilihan berikut yang termasuk sifat wajib bagi Allah SWT? (Pilih 2 jawaban benar)",
+                options: ["Wujud (Ada)", "Huduts (Baru)", "Qidam (Terdahulu)", "Fana' (Binasa)"],
+                answer: [0, 2],
+                explanation: "Wujud dan Qidam adalah sebagian dari 20 sifat wajib bagi Allah SWT."
+            },
+            {
+                id: 17, type: "PGK", weight: 4,
+                stimulus: `<p class='text-xs text-slate-600'>Akhlak terpuji (mahmudah) yang harus dikembangkan oleh seorang santri dalam kehidupan sehari-hari di asrama dan madrasah.</p>`,
+                question: "Manakah yang termasuk contoh perilaku amanah di lingkungan madrasah? (Pilih 2 jawaban benar)",
+                options: ["Menjaga dan mengembalikan buku perpustakaan tepat waktu", "Menyontek jawaban teman saat ujian berlangsung", "Menyampaikan pesan guru piket kepada wali kelas dengan benar", "Mengambil barang milik teman tanpa izin"],
+                answer: [0, 2],
+                explanation: "Mengembalikan buku tepat waktu dan menyampaikan pesan guru adalah cerminan sifat amanah."
+            },
+            {
+                id: 18, type: "PGK", weight: 4,
+                stimulus: `<p class='text-xs text-slate-600'>Dampak buruk dari akhlak tercela yang dapat merusak tatanan pergaulan remaja muslim.</p>`,
+                question: "Manakah yang merupakan dampak negatif dari sifat 'Ananiah (egois)? (Pilih 2 jawaban benar)",
+                options: ["Dijauhi dan tidak disukai oleh teman-teman di kelas", "Mendapatkan penghargaan sebagai siswa mandiri", "Menimbulkan permusuhan dan hilangnya rasa kepedulian", "Meningkatkan solidaritas kelompok sosial"],
+                answer: [0, 2],
+                explanation: "Sifat egois membuat seseorang dijauhi teman dan memicu permusuhan."
+            },
+            {
+                id: 19, type: "PGK", weight: 4,
+                stimulus: `<p class='text-xs text-slate-600'>Penerapan Asmaul Husna Al-Khabir dalam kehidupan seorang mukmin.</p>`,
+                question: "Bagaimana cara seorang santri meneladani sifat Allah SWT Al-Khabir (Maha Teliti/Mengetahui rahasia)? (Pilih 2 jawaban benar)",
+                options: ["Teliti dan cermat dalam mengerjakan soal ujian dan tugas madrasah", "Bersikap ceroboh dan meremehkan setiap pekerjaan", "Waspada dan berhati-hati dalam berbuat dosa meski di tempat sepi", "Sengaja melanggar aturan sekolah saat pengawas lengah"],
+                answer: [0, 2],
+                explanation: "Al-Khabir menuntut ketelitian dan kesadaran bahwa Allah mengetahui segala hal yang tersembunyi."
+            },
+            {
+                id: 20, type: "PGK", weight: 4,
+                stimulus: `<p class='text-xs text-slate-600'>Sifat-sifat utama yang melekat pada diri para rasul Allah SWT.</p>`,
+                question: "Manakah yang termasuk sifat wajib bagi para Rasul Allah SWT? (Pilih 2 jawaban benar)",
+                options: ["Shiddiq (Jujur)", "Kadzib (Berdusta)", "Amanah (Terpercaya)", "Kitman (Menyembunyikan wahyu)"],
+                answer: [0, 2],
+                explanation: "Shiddiq dan Amanah adalah dua dari empat sifat wajib bagi rasul (Shiddiq, Amanah, Tabligh, Fathonah)."
+            },
+
+            // Soal 21-23: Benar / Salah (BS)
+            {
+                id: 21, type: "BS", weight: 4,
+                stimulus: `<p class='text-xs text-slate-600'>Tentukan apakah pernyataan berikut mengenai Asmaul Husna dan Akidah Islam bernilai Benar atau Salah.</p>`,
+                question: "Evaluasi pernyataan berikut sesuai dengan materi Akidah Akhlak Kelas VII:",
+                statements: [
+                    { id: "st1", text: "Asmaul Husna Al-Bashir artinya Allah Maha Melihat segala sesuatu yang nyata maupun gaib.", correct: true },
+                    { id: "st2", text: "Sifat mustahil bagi Allah SWT di antaranya adalah 'Adam (Tidak ada).", correct: true },
+                    { id: "st3", text: "Sifat jaiz bagi Allah berarti Allah wajib menciptakan alam semesta tanpa kehendak.", correct: false }
+                ],
+                answer: { st1: true, st2: true, st3: false },
+                explanation: "Pernyataan 1 dan 2 benar, sedangkan pernyataan 3 salah karena sifat jaiz Allah bersifat mungkin (boleh berbuat atau tidak berbuat)."
+            },
+            {
+                id: 22, type: "BS", weight: 4,
+                stimulus: `<p class='text-xs text-slate-600'>Evaluasi perilaku akhlak mahmudah dan madzmumah dalam kehidupan santri.</p>`,
+                question: "Tentukan kebenaran dari pernyataan berikut:",
+                statements: [
+                    { id: "st1", text: "Hasad adalah sifat terpuji yang mendorong seseorang untuk giat belajar.", correct: false },
+                    { id: "st2", text: "Istiqomah berarti konsisten dalam ketaatan kepada Allah SWT dalam situasi apapun.", correct: true },
+                    { id: "st3", text: "Ghadhab harus dikendalikan agar tidak menimbulkan penyesalan dan permusuhan.", correct: true }
+                ],
+                answer: { st1: false, st2: true, st3: true },
+                explanation: "Hasad adalah sifat tercela (buruk), bukan terpuji. Istiqomah dan pengendalian ghadhab adalah akhlak mulia."
+            },
+            {
+                id: 23, type: "BS", weight: 4,
+                stimulus: `<p class='text-xs text-slate-600'>Kisah keteladanan rasul ulul azmi dan sifat-sifat kenabian.</p>`,
+                question: "Tentukan kebenaran pernyataan berikut:",
+                statements: [
+                    { id: "st1", text: "Fathonah adalah sifat mustahil bagi para rasul Allah.", correct: false },
+                    { id: "st2", text: "Nabi Ulul Azmi adalah para rasul yang memiliki ketabahan luar biasa dalam berdakwah.", correct: true },
+                    { id: "st3", text: "Tabligh artinya rasul menyampaikan wahyu kepada umatnya.", correct: true }
+                ],
+                answer: { st1: false, st2: true, st3: true },
+                explanation: "Fathonah adalah sifat wajib (bukan mustahil) bagi rasul. Ulul Azmi dan Tabligh sudah tepat."
+            },
+
+            // Soal 24-25: Menjodohkan (MATCH)
+            {
+                id: 24, type: "MATCH", weight: 4,
+                stimulus: `<p class='text-xs text-slate-600'>Jodohkan istilah Asmaul Husna di kolom kiri dengan arti yang tepat di kolom kanan.</p>`,
+                question: "Pasangkan premis Asmaul Husna dengan arti yang sesuai:",
+                premises: [
+                    { id: "p1", text: "Al-Alim" },
+                    { id: "p2", text: "As-Sami'" },
+                    { id: "p3", text: "Al-Khabir" }
+                ],
+                responses: [
+                    { id: "r1", text: "Maha Mengetahui" },
+                    { id: "r2", text: "Maha Mendengar" },
+                    { id: "r3", text: "Maha Teliti / Mengetahui rahasia" },
+                    { id: "r4", text: "Maha Kuasa" }
+                ],
+                answer: { p1: "r1", p2: "r2", p3: "r3" },
+                explanation: "Al-Alim = Maha Mengetahui, As-Sami' = Maha Mendengar, Al-Khabir = Maha Teliti."
+            },
+            {
+                id: 25, type: "MATCH", weight: 4,
+                stimulus: `<p class='text-xs text-slate-600'>Jodohkan sifat akhlak tercela (madzmumah) dengan penjelasan yang tepat.</p>`,
+                question: "Pasangkan premis sifat tercela dengan arti atau definisinya:",
+                premises: [
+                    { id: "p1", text: "Hasad" },
+                    { id: "p2", text: "'Ananiah" },
+                    { id: "p3", text: "Ghadhab" }
+                ],
+                responses: [
+                    { id: "r1", text: "Iri dengki ingin hilangnya nikmat orang lain" },
+                    { id: "r2", text: "Sifat egois mementingkan diri sendiri" },
+                    { id: "r3", text: "Sifat pemarah yang tidak terkontrol" },
+                    { id: "r4", text: "Sifat riya' dalam beramal" }
+                ],
+                answer: { p1: "r1", p2: "r2", p3: "r3" },
+                explanation: "Hasad adalah dengki, Ananiah adalah egois, dan Ghadhab adalah pemarah."
+            }
+        ];
+
+        // State Aplikasi
+        let studentData = {
+            name: "",
+            class: "",
+            startTime: null,
+            cheatCount: 0
+        };
+
+        let currentQuestionIndex = 0;
+        let examQuestions = [];
+        let studentAnswers = {};
+        let doubtStatus = {};
+        let timerInterval = null;
+        let totalTimeSeconds = 90 * 60; // 90 Menit
+
+        // Initial Load Event
+        window.addEventListener('DOMContentLoaded', () => {
+            loadSavedState();
+            setupAntiCheat();
+        });
+
+        // Anti-Cheat Events
+        function setupAntiCheat() {
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden && studentData.name && !isExamSubmitted()) {
+                    triggerCheatViolation();
+                }
+            });
+
+            window.addEventListener('blur', () => {
+                if (studentData.name && !isExamSubmitted()) {
+                    triggerCheatViolation();
+                }
+            });
+        }
+
+        function triggerCheatViolation() {
+            studentData.cheatCount += 1;
+            saveLocalState();
+            
+            const badge = document.getElementById('cheat-badge');
+            const countDisp = document.getElementById('cheat-count');
+            if (badge && countDisp) {
+                badge.classList.remove('hidden');
+                countDisp.innerText = studentData.cheatCount;
+            }
+
+            const modal = document.getElementById('cheat-warning-modal');
+            const modalCount = document.getElementById('modal-cheat-count');
+            if (modal && modalCount) {
+                modalCount.innerText = studentData.cheatCount;
+                modal.classList.remove('hidden');
+            }
+        }
+
+        function closeCheatModal() {
+            document.getElementById('cheat-warning-modal').classList.add('hidden');
+            requestFullscreenMode();
+        }
+
+        function requestFullscreenMode() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            }
+        }
+
+        // ----------------------------------------------------
+        // LOGIN & INITIALIZATION
+        // ----------------------------------------------------
+        function handleLogin(e) {
+            e.preventDefault();
+            const tokenInput = document.getElementById('exam-token').value.trim().toUpperCase();
+            const errDiv = document.getElementById('login-error');
+
+            if (tokenInput !== EXAM_TOKEN) {
+                errDiv.classList.remove('hidden');
+                document.getElementById('login-error-msg').innerText = "Token SAS tidak valid!";
+                return;
+            }
+
+            errDiv.classList.add('hidden');
+            studentData.name = document.getElementById('student-name').value.trim();
+            studentData.class = document.getElementById('student-class').value;
+            studentData.startTime = new Date().toISOString();
+
+            document.getElementById('pact-modal').classList.remove('hidden');
+        }
+
+        function closePactModal() {
+            document.getElementById('pact-modal').classList.add('hidden');
+        }
+
+        function startExamNow() {
+            const chk = document.getElementById('pact-check');
+            if (!chk.checked) {
+                alert("Anda harus mencentang pakta kejujuran terlebih dahulu sebelum memulai ujian!");
+                return;
+            }
+
+            closePactModal();
+            requestFullscreenMode();
+
+            // Setup Bank Soal & Acak Soal
+            examQuestions = JSON.parse(JSON.stringify(rawQuestionBank));
+            shuffleArray(examQuestions);
+
+            studentAnswers = {};
+            doubtStatus = {};
+            currentQuestionIndex = 0;
+            totalTimeSeconds = 90 * 60;
+
+            saveLocalState();
+            initExamWorkspace();
+        }
+
+        function initExamWorkspace() {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('result-screen').classList.add('hidden');
+            document.getElementById('exam-screen').classList.remove('hidden');
+
+            document.getElementById('disp-student-name').innerText = studentData.name;
+            document.getElementById('disp-student-meta').innerText = `Kelas: ${studentData.class}`;
+
+            if (studentData.cheatCount > 0) {
+                document.getElementById('cheat-badge').classList.remove('hidden');
+                document.getElementById('cheat-count').innerText = studentData.cheatCount;
+            }
+
+            startTimer();
+            renderQuestionGrid();
+            renderCurrentQuestion();
+        }
+
+        function shuffleArray(array) {
+            let cur = array.length, rand;
+            while (cur !== 0) {
+                rand = Math.floor(Math.random() * cur);
+                cur--;
+                [array[cur], array[rand]] = [array[rand], array[cur]];
+            }
+            return array;
+        }
+
+        // ----------------------------------------------------
+        // COUNTDOWN TIMER
+        // ----------------------------------------------------
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+
+            timerInterval = setInterval(() => {
+                totalTimeSeconds--;
+                saveLocalState();
+
+                if (totalTimeSeconds <= 0) {
+                    clearInterval(timerInterval);
+                    alert("Waktu ujian telah habis! Sistem akan mengumpulkan jawaban Anda otomatis.");
+                    processFinalSubmit();
+                }
+
+                updateTimerDisplay();
+            }, 1000);
+            updateTimerDisplay();
+        }
+
+        function updateTimerDisplay() {
+            const m = Math.floor(totalTimeSeconds / 60);
+            const s = totalTimeSeconds % 60;
+            const disp = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            const timerElem = document.getElementById('timer-disp');
+            if (timerElem) timerElem.innerText = disp;
+        }
+
+        // ----------------------------------------------------
+        // RENDER WORKSPACE & NAVIGATION
+        // ----------------------------------------------------
+        function renderCurrentQuestion() {
+            const q = examQuestions[currentQuestionIndex];
+            if (!q) return;
+
+            document.getElementById('q-number-badge').innerText = `Soal No. ${currentQuestionIndex + 1} dari ${examQuestions.length}`;
+            
+            let typeLabel = "Pilihan Ganda";
+            if (q.type === "PGK") typeLabel = "PG Kompleks (Bisa >1 Jawaban)";
+            else if (q.type === "BS") typeLabel = "Benar / Salah";
+            else if (q.type === "MATCH") typeLabel = "Menjodohkan";
+            document.getElementById('q-type-badge').innerText = typeLabel;
+
+            document.getElementById('q-weight-badge').innerText = `Bobot: ${q.weight} Poin`;
+
+            const stimArea = document.getElementById('stimulus-area');
+            if (q.stimulus && q.stimulus.trim() !== "") {
+                stimArea.innerHTML = q.stimulus;
+                stimArea.classList.remove('hidden');
+            } else {
+                stimArea.classList.add('hidden');
+            }
+            document.getElementById('question-text').innerText = q.question;
+
+            const optArea = document.getElementById('options-area');
+            optArea.innerHTML = "";
+
+            const curAns = studentAnswers[q.id];
+
+            if (q.type === "PG") {
+                const labels = ["A", "B", "C", "D"];
+                q.options.forEach((opt, idx) => {
+                    const isChecked = curAns === idx;
+                    const optBtn = document.createElement('label');
+                    optBtn.className = `flex items-center gap-3 p-3.5 rounded-xl border-2 cursor-pointer transition ${isChecked ? 'bg-emerald-50 border-emerald-600 text-emerald-950 font-semibold' : 'bg-white border-slate-200 hover:border-emerald-300 text-slate-700'}`;
+                    optBtn.innerHTML = `
+                        <input type="radio" name="pg-opt" value="${idx}" ${isChecked ? 'checked' : ''} onchange="selectPGAnswer(${q.id}, ${idx})" class="w-4 h-4 text-emerald-600 focus:ring-emerald-500">
+                        <span class="w-6 h-6 rounded-full bg-slate-100 border text-xs font-bold flex items-center justify-center text-slate-600">${labels[idx]}</span>
+                        <span class="text-sm flex-1">${opt}</span>
+                    `;
+                    optArea.appendChild(optBtn);
+                });
+            } else if (q.type === "PGK") {
+                const selectedArr = Array.isArray(curAns) ? curAns : [];
+                q.options.forEach((opt, idx) => {
+                    const isChecked = selectedArr.includes(idx);
+                    const optBtn = document.createElement('label');
+                    optBtn.className = `flex items-center gap-3 p-3.5 rounded-xl border-2 cursor-pointer transition ${isChecked ? 'bg-emerald-50 border-emerald-600 text-emerald-950 font-semibold' : 'bg-white border-slate-200 hover:border-emerald-300 text-slate-700'}`;
+                    optBtn.innerHTML = `
+                        <input type="checkbox" value="${idx}" ${isChecked ? 'checked' : ''} onchange="togglePGKAnswer(${q.id}, ${idx})" class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500">
+                        <span class="text-sm flex-1">${opt}</span>
+                    `;
+                    optArea.appendChild(optBtn);
+                });
+            } else if (q.type === "BS") {
+                const ansObj = curAns || {};
+                const table = document.createElement('div');
+                table.className = "border rounded-xl overflow-hidden text-sm";
+                table.innerHTML = `
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-100 text-slate-700 font-bold border-b">
+                            <tr>
+                                <th class="p-3">Pernyataan</th>
+                                <th class="p-3 w-20 text-center">BENAR</th>
+                                <th class="p-3 w-20 text-center">SALAH</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y">
+                            ${q.statements.map(st => `
+                                <tr class="hover:bg-slate-50">
+                                    <td class="p-3 text-slate-800">${st.text}</td>
+                                    <td class="p-3 text-center">
+                                        <input type="radio" name="bs-${st.id}" ${ansObj[st.id] === true ? 'checked' : ''} onchange="setBSAnswer(${q.id}, '${st.id}', true)" class="w-4 h-4 text-emerald-600">
+                                    </td>
+                                    <td class="p-3 text-center">
+                                        <input type="radio" name="bs-${st.id}" ${ansObj[st.id] === false ? 'checked' : ''} onchange="setBSAnswer(${q.id}, '${st.id}', false)" class="w-4 h-4 text-rose-600">
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+                optArea.appendChild(table);
+            } else if (q.type === "MATCH") {
+                const ansObj = curAns || {};
+                const matchDiv = document.createElement('div');
+                matchDiv.className = "space-y-4 bg-slate-50 p-4 rounded-xl border";
+                matchDiv.innerHTML = `
+                    <p class="text-xs font-semibold text-slate-500 uppercase">Pasangkan Premis Kiri dengan Respon Kanan:</p>
+                    <div class="space-y-3">
+                        ${q.premises.map(p => `
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-white rounded-lg border">
+                                <span class="font-medium text-slate-800 text-sm">${p.text}</span>
+                                <select onchange="setMatchAnswer(${q.id}, '${p.id}', this.value)" class="px-3 py-2 border border-slate-300 rounded-lg text-xs font-semibold bg-slate-50 focus:ring-2 focus:ring-emerald-500 outline-none">
+                                    <option value="">-- Pilih Pasangan --</option>
+                                    ${q.responses.map(r => `
+                                        <option value="${r.id}" ${ansObj[p.id] === r.id ? 'selected' : ''}>${r.text}</option>
+                                    `).join('')}
+                                </select>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                optArea.appendChild(matchDiv);
+            }
+
+            document.getElementById('doubt-checkbox').checked = !!doubtStatus[q.id];
+
+            document.getElementById('btn-prev').disabled = currentQuestionIndex === 0;
+            const btnNext = document.getElementById('btn-next');
+            if (currentQuestionIndex === examQuestions.length - 1) {
+                btnNext.innerHTML = `Selesai & Kirim <i class="fa-solid fa-check"></i>`;
+                btnNext.className = "px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs sm:text-sm flex items-center gap-1.5 shadow-md transition";
+            } else {
+                btnNext.innerHTML = `Selanjutnya <i class="fa-solid fa-chevron-right"></i>`;
+                btnNext.className = "px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs sm:text-sm flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition";
+            }
+
+            renderQuestionGrid();
+        }
+
+        function selectPGAnswer(qId, optIdx) {
+            studentAnswers[qId] = optIdx;
+            saveLocalState();
+            renderQuestionGrid();
+        }
+
+        function togglePGKAnswer(qId, optIdx) {
+            let cur = studentAnswers[qId] || [];
+            if (!Array.isArray(cur)) cur = [];
+            const idxIn = cur.indexOf(optIdx);
+            if (idxIn > -1) cur.splice(idxIn, 1);
+            else cur.push(optIdx);
+            studentAnswers[qId] = cur;
+            saveLocalState();
+            renderQuestionGrid();
+        }
+
+        function setBSAnswer(qId, stId, val) {
+            let cur = studentAnswers[qId] || {};
+            cur[stId] = val;
+            studentAnswers[qId] = cur;
+            saveLocalState();
+            renderQuestionGrid();
+        }
+
+        function setMatchAnswer(qId, premId, respId) {
+            let cur = studentAnswers[qId] || {};
+            if (respId === "") delete cur[premId];
+            else cur[premId] = respId;
+            studentAnswers[qId] = cur;
+            saveLocalState();
+            renderQuestionGrid();
+        }
+
+        function toggleDoubtStatus() {
+            const q = examQuestions[currentQuestionIndex];
+            const chk = document.getElementById('doubt-checkbox').checked;
+            doubtStatus[q.id] = chk;
+            saveLocalState();
+            renderQuestionGrid();
+        }
+
+        function prevQuestion() {
+            if (currentQuestionIndex > 0) {
+                currentQuestionIndex--;
+                renderCurrentQuestion();
+            }
+        }
+
+        function nextQuestion() {
+            if (currentQuestionIndex < examQuestions.length - 1) {
+                currentQuestionIndex++;
+                renderCurrentQuestion();
+            } else {
+                confirmSubmitExam();
+            }
+        }
+
+        function jumpToQuestion(idx) {
+            currentQuestionIndex = idx;
+            renderCurrentQuestion();
+            const mobModal = document.getElementById('mobile-grid-modal');
+            if (!mobModal.classList.contains('hidden')) {
+                mobModal.classList.add('hidden');
+            }
+        }
+
+        function renderQuestionGrid() {
+            const gridDesk = document.getElementById('q-grid');
+            const gridMob = document.getElementById('q-grid-mobile');
+            if (!gridDesk) return;
+
+            gridDesk.innerHTML = "";
+            gridMob.innerHTML = "";
+
+            examQuestions.forEach((q, idx) => {
+                const isCurrent = idx === currentQuestionIndex;
+                const isDoubt = !!doubtStatus[q.id];
+                const hasAnswer = checkQuestionAnswered(q);
+
+                let btnClass = "bg-white text-slate-700 border-slate-300 hover:bg-slate-100";
+                if (isCurrent) {
+                    btnClass = "bg-indigo-600 text-white font-bold ring-2 ring-indigo-300 border-indigo-600";
+                } else if (isDoubt) {
+                    btnClass = "bg-amber-400 text-amber-950 font-bold border-amber-500";
+                } else if (hasAnswer) {
+                    btnClass = "bg-emerald-600 text-white font-bold border-emerald-700";
+                }
+
+                const btnHtml = `
+                    <button onclick="jumpToQuestion(${idx})" class="w-full aspect-square rounded-lg text-xs font-bold border flex items-center justify-center transition shadow-sm relative ${btnClass}">
+                        ${idx + 1}
+                        ${isDoubt ? `<span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-500 rounded-full border border-white"></span>` : ''}
+                    </button>
+                `;
+
+                gridDesk.innerHTML += btnHtml;
+                gridMob.innerHTML += btnHtml;
+            });
+        }
+
+        function checkQuestionAnswered(q) {
+            const ans = studentAnswers[q.id];
+            if (ans === undefined || ans === null) return false;
+            if (q.type === "PG") return true;
+            if (q.type === "PGK") return Array.isArray(ans) && ans.length > 0;
+            if (q.type === "BS") return Object.keys(ans).length === q.statements.length;
+            if (q.type === "MATCH") return Object.keys(ans).length === q.premises.length;
+            return false;
+        }
+
+        function toggleGridModal() {
+            document.getElementById('mobile-grid-modal').classList.toggle('hidden');
+        }
+
+        function setFontSize(size) {
+            const container = document.getElementById('q-content-container');
+            if (size === 'small') container.className = "p-6 flex-1 overflow-y-auto space-y-5 text-slate-800 text-sm leading-relaxed";
+            else if (size === 'normal') container.className = "p-6 flex-1 overflow-y-auto space-y-5 text-slate-800 text-base leading-relaxed";
+            else if (size === 'large') container.className = "p-6 flex-1 overflow-y-auto space-y-5 text-slate-800 text-lg leading-relaxed";
+        }
+
+        // ----------------------------------------------------
+        // SUBMIT & SCORING
+        // ----------------------------------------------------
+        function confirmSubmitExam() {
+            let answered = 0;
+            let doubt = 0;
+
+            examQuestions.forEach(q => {
+                if (checkQuestionAnswered(q)) answered++;
+                if (doubtStatus[q.id]) doubt++;
+            });
+
+            const unanswered = examQuestions.length - answered;
+
+            document.getElementById('recap-answered').innerText = `${answered} Soal`;
+            document.getElementById('recap-doubt').innerText = `${doubt} Soal`;
+            document.getElementById('recap-unanswered').innerText = `${unanswered} Soal`;
+
+            const warn = document.getElementById('unanswered-warning');
+            if (unanswered > 0 || doubt > 0) warn.classList.remove('hidden');
+            else warn.classList.add('hidden');
+
+            document.getElementById('confirm-submit-modal').classList.remove('hidden');
+        }
+
+        function closeConfirmModal() {
+            document.getElementById('confirm-submit-modal').classList.add('hidden');
+        }
+
+        function processFinalSubmit() {
+            closeConfirmModal();
+            if (timerInterval) clearInterval(timerInterval);
+
+            let totalEarned = 0;
+            let totalMaxWeight = 0;
+
+            examQuestions.forEach(q => {
+                totalMaxWeight += q.weight;
+                const ans = studentAnswers[q.id];
+
+                if (q.type === "PG") {
+                    if (ans === q.answer) totalEarned += q.weight;
+                } else if (q.type === "PGK") {
+                    if (Array.isArray(ans)) {
+                        const correctSet = new Set(q.answer);
+                        const studentSet = new Set(ans);
+                        if (correctSet.size === studentSet.size && [...correctSet].every(x => studentSet.has(x))) {
+                            totalEarned += q.weight;
+                        }
+                    }
+                } else if (q.type === "BS") {
+                    if (ans && typeof ans === 'object') {
+                        let correctCount = 0;
+                        q.statements.forEach(st => {
+                            if (ans[st.id] === st.correct) correctCount++;
+                        });
+                        totalEarned += (correctCount / q.statements.length) * q.weight;
+                    }
+                } else if (q.type === "MATCH") {
+                    if (ans && typeof ans === 'object') {
+                        let correctCount = 0;
+                        const totalPremises = Object.keys(q.answer).length;
+                        Object.keys(q.answer).forEach(pKey => {
+                            if (ans[pKey] === q.answer[pKey]) correctCount++;
+                        });
+                        totalEarned += (correctCount / totalPremises) * q.weight;
+                    }
+                }
+            });
+
+            const finalScore = Number(((totalEarned / totalMaxWeight) * 100).toFixed(1));
+            
+            let pred = "Sangat Baik (A)";
+            if (finalScore < 60) pred = "Perlu Bimbingan (D)";
+            else if (finalScore < 75) pred = "Cukup (C)";
+            else if (finalScore < 88) pred = "Baik (B)";
+
+            // Simpan detail jawaban juga untuk analisis per nomor soal
+            const detailJawabanMap = {};
+            examQuestions.forEach(q => {
+                detailJawabanMap[q.id] = studentAnswers[q.id] !== undefined ? studentAnswers[q.id] : "-";
+            });
+
+            const resultData = {
+                student: studentData,
+                score: finalScore,
+                predicate: pred,
+                submittedAt: new Date().toLocaleString('id-ID'),
+                answers: studentAnswers,
+                detail_jawaban: detailJawabanMap
+            };
+
+            localStorage.setItem('cbt_sas_result', JSON.stringify(resultData));
+
+            document.getElementById('exam-screen').classList.add('hidden');
+            document.getElementById('result-screen').classList.remove('hidden');
+
+            document.getElementById('res-student-name').innerText = studentData.name;
+            document.getElementById('res-student-meta').innerText = studentData.class;
+            document.getElementById('res-timestamp').innerText = resultData.submittedAt;
+            document.getElementById('res-final-score').innerText = finalScore;
+            document.getElementById('res-predicate').innerText = `Predikat: ${pred}`;
+            document.getElementById('res-cheat-log').innerText = `Catatan Pelanggaran Anti-Cheat: ${studentData.cheatCount} Kali`;
+
+            if (WEBHOOK_URL && WEBHOOK_URL.trim() !== "") {
+                sendWebhookData();
+            }
+        }
+
+        function isExamSubmitted() {
+            return !document.getElementById('result-screen').classList.contains('hidden');
+        }
+
+        // ----------------------------------------------------
+        // WEBHOOK & EXPORT
+        // ----------------------------------------------------
+        function sendWebhookData() {
+            const saved = localStorage.getItem('cbt_sas_result');
+            if (!saved) return;
+            const res = JSON.parse(saved);
+
+            if (!WEBHOOK_URL || WEBHOOK_URL.trim() === "") {
+                alert("URL Webhook Google Sheets belum dikonfigurasi.");
+                return;
+            }
+
+            const payload = {
+                nama: res.student.name,
+                kelas: res.student.class,
+                skor: res.score,
+                predikat: res.predicate,
+                pelanggaran: res.student.cheatCount,
+                waktu_selesai: res.submittedAt,
+                detail_jawaban: res.detail_jawaban
+            };
+
+            fetch(WEBHOOK_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).then(() => {
+                alert("Data rekap nilai berhasil dikirim ke Google Sheets Guru!");
+            }).catch(() => {
+                alert("Gagal mengirim data ke server. Pastikan koneksi internet stabil.");
+            });
+        }
+
+        // ----------------------------------------------------
+        // PANEL GURU
+        // ----------------------------------------------------
+        function openGuruAuthModal() {
+            document.getElementById('guru-auth-modal').classList.remove('hidden');
+        }
+
+        function closeGuruAuthModal() {
+            document.getElementById('guru-auth-modal').classList.add('hidden');
+        }
+
+        function verifyGuruPin() {
+            const pin = document.getElementById('guru-pin-input').value;
+            const err = document.getElementById('guru-pin-error');
+            if (pin === GURU_PIN) {
+                err.classList.add('hidden');
+                closeGuruAuthModal();
+                showGuruPanel();
+            } else {
+                err.classList.remove('hidden');
+            }
+        }
+
+        function showGuruPanel() {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('exam-screen').classList.add('hidden');
+            document.getElementById('result-screen').classList.add('hidden');
+            document.getElementById('guru-panel-screen').classList.remove('hidden');
+
+            document.getElementById('webhook-input').value = WEBHOOK_URL;
+
+            const tbody = document.getElementById('guru-table-body');
+            const saved = localStorage.getItem('cbt_sas_result');
+            if (saved) {
+                const res = JSON.parse(saved);
+                tbody.innerHTML = `
+                    <tr class="hover:bg-slate-50">
+                        <td class="p-3 font-bold">${res.student.name}</td>
+                        <td class="p-3">${res.student.class}</td>
+                        <td class="p-3">${res.submittedAt}</td>
+                        <td class="p-3"><span class="px-2 py-0.5 ${res.student.cheatCount > 0 ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600'} font-bold rounded">${res.student.cheatCount}x</span></td>
+                        <td class="p-3 font-mono font-bold text-emerald-700 text-sm">${res.score}</td>
+                        <td class="p-3">${res.predicate}</td>
+                    </tr>
+                `;
+            } else {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">Belum ada data ujian yang tersimpan.</td></tr>`;
+            }
+
+            const keysContainer = document.getElementById('guru-keys-container');
+            keysContainer.innerHTML = "";
+
+            rawQuestionBank.forEach((q, idx) => {
+                let ansTxt = "";
+                if (q.type === "PG") ansTxt = `Pilihan ${["A", "B", "C", "D"][q.answer]}`;
+                else if (q.type === "PGK") ansTxt = `Opsi Index: ${q.answer.join(', ')}`;
+                else if (q.type === "BS") ansTxt = "Sesuai Kunci Pernyataan";
+                else if (q.type === "MATCH") ansTxt = "Pasangan Sesuai Kunci";
+
+                keysContainer.innerHTML += `
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1">
+                        <div class="flex justify-between font-bold text-slate-800">
+                            <span>Soal No. ${idx + 1} (${q.type})</span>
+                            <span class="text-emerald-700">Kunci: ${ansTxt}</span>
+                        </div>
+                        <p class="text-slate-600">${q.question}</p>
+                        <p class="text-amber-800 bg-amber-50 p-2 rounded border border-amber-200 italic"><b>Pembahasan:</b> ${q.explanation}</p>
+                    </div>
+                `;
+            });
+        }
+
+        function saveWebhookUrl() {
+            WEBHOOK_URL = document.getElementById('webhook-input').value.trim();
+            localStorage.setItem('cbt_webhook_url', WEBHOOK_URL);
+            alert("URL Webhook berhasil diperbarui!");
+        }
+
+        function exportToCSV() {
+            const saved = localStorage.getItem('cbt_sas_result');
+            if (!saved) {
+                alert("Belum ada data hasil ujian untuk di-export.");
+                return;
+            }
+            const res = JSON.parse(saved);
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "Nama Siswa,Kelas,Skor Akhir,Predikat,Pelanggaran AntiCheat,Waktu Selesai\n";
+            csvContent += `"${res.student.name}","${res.student.class}",${res.score},"${res.predicate}",${res.student.cheatCount},"${res.submittedAt}"\n`;
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `REKAP_SAS_AKIDAH_AKHLAK_${res.student.name.replace(/\s+/g, '_')}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function resetStudentSession() {
+            if (confirm("Apakah Anda yakin ingin menghapus data sesi ujian di perangkat ini untuk mengulang ujian?")) {
+                localStorage.removeItem('cbt_sas_state');
+                localStorage.removeItem('cbt_sas_result');
+                location.reload();
+            }
+        }
+
+        function exitGuruPanel() {
+            document.getElementById('guru-panel-screen').classList.add('hidden');
+            if (localStorage.getItem('cbt_sas_result')) {
+                document.getElementById('result-screen').classList.remove('hidden');
+            } else {
+                document.getElementById('login-screen').classList.remove('hidden');
+            }
+        }
+
+        // ----------------------------------------------------
+        // LOCAL STORAGE STATE
+        // ----------------------------------------------------
+        function saveLocalState() {
+            const state = {
+                studentData,
+                currentQuestionIndex,
+                examQuestions,
+                studentAnswers,
+                doubtStatus,
+                totalTimeSeconds
+            };
+            localStorage.setItem('cbt_sas_state', JSON.stringify(state));
+        }
+
+        function loadSavedState() {
+            const savedWebhook = localStorage.getItem('cbt_webhook_url');
+            if (savedWebhook) WEBHOOK_URL = savedWebhook;
+
+            const savedState = localStorage.getItem('cbt_sas_state');
+            if (savedState) {
+                try {
+                    const parsed = JSON.parse(savedState);
+                    studentData = parsed.studentData || studentData;
+                    currentQuestionIndex = parsed.currentQuestionIndex || 0;
+                    examQuestions = parsed.examQuestions || [];
+                    studentAnswers = parsed.studentAnswers || {};
+                    doubtStatus = parsed.doubtStatus || {};
+                    totalTimeSeconds = parsed.totalTimeSeconds || 90 * 60;
+
+                    if (localStorage.getItem('cbt_sas_result')) {
+                        processFinalSubmit();
+                    } else if (studentData.name) {
+                        initExamWorkspace();
+                    }
+                } catch (e) {
+                    console.log("State recovery error", e);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
